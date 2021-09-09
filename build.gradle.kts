@@ -16,6 +16,8 @@ dependencies {
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.3")
+    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.23.0")
 }
 
 tasks.test {
