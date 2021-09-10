@@ -2,6 +2,7 @@ package com.jetbrains.internship.extractInterfaceProject
 
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
+import kotlinx.cli.default
 import kotlinx.cli.multiple
 import java.nio.file.Paths
 
@@ -77,7 +78,7 @@ class CLI {
             ArgType.Choice<JavaVisibilityModifier>(),
             shortName = "v",
             description = "Visibility"
-        ).multiple()
+        ).multiple().default(listOf(JavaVisibilityModifier.PUBLIC))
         val outputInterfaceName by parser.option(
             ArgType.String,
             shortName = "i",

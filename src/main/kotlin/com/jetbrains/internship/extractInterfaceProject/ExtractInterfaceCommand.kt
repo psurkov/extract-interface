@@ -2,6 +2,7 @@ package com.jetbrains.internship.extractInterfaceProject
 
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.Modifier
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import java.nio.file.Files
 import java.nio.file.Path
@@ -17,20 +18,41 @@ class ExtractInterfaceCommand(
 ) : CLI.CLICommand {
 
     override fun execute(): CLI.CLICommandResult {
-        val compilationUnit = StaticJavaParser.parse(inputFile)
-        val res = CompilationUnit()
-
+        val inputCompilationUnit = StaticJavaParser.parse(inputFile)
         val inputClass = if (className == null) {
-            compilationUnit.primaryType.orElse(null) as? ClassOrInterfaceDeclaration
+            inputCompilationUnit.primaryType.orElse(null) as? ClassOrInterfaceDeclaration
         } else {
-            compilationUnit.getClassByName(className).orElse(null)
+            inputCompilationUnit.getClassByName(className).orElse(null)
         }?.takeIf { !it.isInterface } ?: TODO()
 
-        val result = res.addInterface(inputClass.nameAsString + "Interface")
-        inputClass.methods.forEach {
-            result.addMethod(it.nameAsString)
+        val resultCompilationUnit = CompilationUnit()
+        inputCompilationUnit.packageDeclaration.ifPresent { resultCompilationUnit.setPackageDeclaration(it) }
+        resultCompilationUnit.imports = inputCompilationUnit.imports
+        val resultInterface = resultCompilationUnit.addInterface(inputClass.nameAsString + "Interface")
+        inputClass.methods.filter {
+            when {
+                it.isPrivate -> visibility.contains(JavaVisibilityModifier.PRIVATE)
+                it.isProtected -> visibility.contains(JavaVisibilityModifier.PROTECTED)
+                it.isPublic -> visibility.contains(JavaVisibilityModifier.PUBLIC)
+                else -> visibility.contains(JavaVisibilityModifier.INTERNAL)
+            }
+        }.forEach {
+            resultInterface.members.add(it.apply {
+                if (!it.isStatic) {
+                    removeBody()
+                }
+                removeModifier(
+                    Modifier.Keyword.PRIVATE,
+                    Modifier.Keyword.PROTECTED,
+                    Modifier.Keyword.PUBLIC,
+                    Modifier.Keyword.ABSTRACT,
+                    Modifier.Keyword.FINAL,
+                    Modifier.Keyword.SYNCHRONIZED,
+                    Modifier.Keyword.NATIVE
+                )
+            })
         }
-        Files.writeString(outputFile, result.toString())
+        Files.writeString(outputFile, resultCompilationUnit.toString())
         return CLI.CLICommandResult()
     }
 }
