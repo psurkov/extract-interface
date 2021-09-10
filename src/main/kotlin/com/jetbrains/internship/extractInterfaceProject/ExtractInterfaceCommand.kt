@@ -10,8 +10,8 @@ import java.nio.file.Path
 class ExtractInterfaceCommand(
     private val inputFile: Path,
     private val className: String?,
-    private val whitelist: List<String>?,
-    private val blacklist: List<String>?,
+    private val whitelist: Set<String>?,
+    private val blacklist: Set<String>?,
     private val visibility: List<JavaVisibilityModifier>,
     private val outputInterfaceName: String?,
     private val outputFile: Path?
@@ -29,7 +29,10 @@ class ExtractInterfaceCommand(
         addMethods(selectedClass, targetInterface, whitelist, blacklist)
         addStaticClasses(selectedClass, targetInterface)
 
-        Files.writeString(outputFile, targetCompilationUnit.toString())
+        Files.writeString(
+            outputFile ?: inputFile.parent.resolve("${selectedClass.nameAsString}Interface.java"),
+            targetCompilationUnit.toString()
+        )
         return CLI.CLICommandResult()
     }
 
@@ -59,16 +62,18 @@ class ExtractInterfaceCommand(
     private fun addMethods(
         targetClass: ClassOrInterfaceDeclaration,
         resultInterface: ClassOrInterfaceDeclaration,
-        whitelist: List<String>?,
-        blacklist: List<String>?
+        whitelist: Set<String>?,
+        blacklist: Set<String>?
     ) {
+        // TODO check whitelist & blacklist intersection
         targetClass.methods.filter {
             when {
                 it.isPrivate -> visibility.contains(JavaVisibilityModifier.PRIVATE)
                 it.isProtected -> visibility.contains(JavaVisibilityModifier.PROTECTED)
                 it.isPublic -> visibility.contains(JavaVisibilityModifier.PUBLIC)
                 else -> visibility.contains(JavaVisibilityModifier.INTERNAL)
-            }
+            } && (whitelist == null || whitelist.contains(it.nameAsString))
+                    && (blacklist == null || !blacklist.contains(it.nameAsString))
         }.forEach {
             resultInterface.members.add(it.apply {
                 if (!it.isStatic) {

@@ -93,8 +93,8 @@ class CLI {
         return ExtractInterfaceCommand(
             Paths.get(inputFile),
             className,
-            whitelist,
-            blacklist,
+            whitelist.toSet(),
+            blacklist.toSet(),
             visibility,
             outputInterfaceName,
             outputFile?.let { Paths.get(it) }
