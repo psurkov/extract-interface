@@ -20,6 +20,20 @@ internal class ExtractInterfaceCommandTest : AbstractExtractInterfaceCommandTest
     }
 
     @Test
+    fun testEmptyCustomName() {
+        testSample(
+            "Empty",
+            "EmptyCustomName",
+            CLI.CLICommandResult(),
+            null,
+            null,
+            null,
+            JavaVisibilityModifier.values().asList(),
+            "EmptyCustomName",
+        )
+    }
+
+    @Test
     fun testJustFields() {
         testSample(
             "JustFields",
@@ -138,6 +152,62 @@ internal class ExtractInterfaceCommandTest : AbstractExtractInterfaceCommandTest
             "Modifiers",
             CLI.CLICommandResult(),
             null,
+            null,
+            null,
+            JavaVisibilityModifier.values().asList(),
+            null,
+        )
+    }
+
+    @Test
+    fun testClassesTop() {
+        testSample(
+            "ClassesTop",
+            "ClassesTop",
+            CLI.CLICommandResult(),
+            null,
+            null,
+            null,
+            JavaVisibilityModifier.values().asList(),
+            null,
+        )
+    }
+
+    @Test
+    fun testClassesInner() {
+        testSample(
+            "ClassesTop",
+            "ClassesInner",
+            CLI.CLICommandResult(),
+            "ClassesTop.ClassesInner",
+            null,
+            null,
+            JavaVisibilityModifier.values().asList(),
+            null,
+        )
+    }
+
+    @Test
+    fun testClassesNested() {
+        testSample(
+            "ClassesTop",
+            "ClassesNested",
+            CLI.CLICommandResult(),
+            "ClassesTop.ClassesNested",
+            null,
+            null,
+            JavaVisibilityModifier.values().asList(),
+            null,
+        )
+    }
+
+    @Test
+    fun testClassesSide() {
+        testSample(
+            "ClassesTop",
+            "ClassesSide",
+            CLI.CLICommandResult(),
+            "ClassesSide",
             null,
             null,
             JavaVisibilityModifier.values().asList(),

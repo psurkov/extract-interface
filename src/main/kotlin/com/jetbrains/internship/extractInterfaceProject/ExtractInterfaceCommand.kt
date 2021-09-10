@@ -19,17 +19,50 @@ class ExtractInterfaceCommand(
 
     override fun execute(): CLI.CLICommandResult {
         val inputCompilationUnit = StaticJavaParser.parse(inputFile)
-        val inputClass = if (className == null) {
-            inputCompilationUnit.primaryType.orElse(null) as? ClassOrInterfaceDeclaration
-        } else {
-            inputCompilationUnit.getClassByName(className).orElse(null)
-        }?.takeIf { !it.isInterface } ?: TODO()
+        val selectedClass = findClass(inputCompilationUnit, className)
 
-        val resultCompilationUnit = CompilationUnit()
-        inputCompilationUnit.packageDeclaration.ifPresent { resultCompilationUnit.setPackageDeclaration(it) }
-        resultCompilationUnit.imports = inputCompilationUnit.imports
-        val resultInterface = resultCompilationUnit.addInterface(inputClass.nameAsString + "Interface")
-        inputClass.methods.filter {
+        val targetCompilationUnit = CompilationUnit()
+        val targetInterface =
+            targetCompilationUnit.addInterface(outputInterfaceName ?: selectedClass.nameAsString + "Interface")
+
+        addPackageAndImports(inputCompilationUnit, targetCompilationUnit)
+        addMethods(selectedClass, targetInterface, whitelist, blacklist)
+        addStaticClasses(selectedClass, targetInterface)
+
+        Files.writeString(outputFile, targetCompilationUnit.toString())
+        return CLI.CLICommandResult()
+    }
+
+    private fun findClass(
+        compilationUnit: CompilationUnit,
+        targetClassName: String?
+    ): ClassOrInterfaceDeclaration {
+        return if (targetClassName == null) {
+            compilationUnit.primaryType.orElse(null) as? ClassOrInterfaceDeclaration
+        } else {
+            compilationUnit.findFirst(
+                ClassOrInterfaceDeclaration::class.java
+            ) {
+                it.fullyQualifiedName.filter { className -> className == targetClassName }.isPresent
+            }.orElse(null)
+        }?.takeIf { !it.isInterface } ?: TODO()
+    }
+
+    private fun addPackageAndImports(
+        inputCompilationUnit: CompilationUnit,
+        targetCompilationUnit: CompilationUnit
+    ) {
+        inputCompilationUnit.packageDeclaration.ifPresent { targetCompilationUnit.setPackageDeclaration(it) }
+        targetCompilationUnit.imports = inputCompilationUnit.imports
+    }
+
+    private fun addMethods(
+        targetClass: ClassOrInterfaceDeclaration,
+        resultInterface: ClassOrInterfaceDeclaration,
+        whitelist: List<String>?,
+        blacklist: List<String>?
+    ) {
+        targetClass.methods.filter {
             when {
                 it.isPrivate -> visibility.contains(JavaVisibilityModifier.PRIVATE)
                 it.isProtected -> visibility.contains(JavaVisibilityModifier.PROTECTED)
@@ -52,7 +85,15 @@ class ExtractInterfaceCommand(
                 )
             })
         }
-        Files.writeString(outputFile, resultCompilationUnit.toString())
-        return CLI.CLICommandResult()
+    }
+
+    private fun addStaticClasses(
+        targetClass: ClassOrInterfaceDeclaration,
+        resultInterface: ClassOrInterfaceDeclaration
+    ) {
+        targetClass.childNodes
+            .filterIsInstance<ClassOrInterfaceDeclaration>()
+            .filter { it.isStatic }
+            .forEach(resultInterface::addMember)
     }
 }
