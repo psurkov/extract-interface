@@ -240,6 +240,19 @@ internal class ExtractInterfaceCommandTest {
     }
 
     @Test
+    fun testTricky() {
+        checkCorrectSample(
+            "Tricky",
+            "TrickyInterface",
+            null,
+            null,
+            setOf("badFunc1", "badFunc2"),
+            listOf(PUBLIC, PROTECTED),
+            null,
+        )
+    }
+
+    @Test
     fun testDefaultOutputPath(@TempDir tempDir: Path) {
         val input = tempDir.resolve("Name.java")
         input.toFile().writeText("public class Name {}")
