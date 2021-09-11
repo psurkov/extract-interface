@@ -51,8 +51,8 @@ class CLI {
         return ExtractInterfaceCommand(
             Paths.get(inputFile),
             className,
-            whitelist.toSet(),
-            blacklist.toSet(),
+            whitelist.toSet().takeIf { it.isNotEmpty() },
+            blacklist.toSet().takeIf { it.isNotEmpty() },
             visibility,
             outputInterfaceName,
             outputFile?.let { Paths.get(it) }

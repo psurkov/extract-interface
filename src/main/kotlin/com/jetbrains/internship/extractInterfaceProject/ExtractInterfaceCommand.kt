@@ -8,13 +8,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 class ExtractInterfaceCommand(
-    private val inputFile: Path,
-    private val className: String?,
-    private val whitelist: Set<String>?,
-    private val blacklist: Set<String>?,
-    private val visibility: List<JavaVisibilityModifier>,
-    private val outputInterfaceName: String?,
-    private val outputFile: Path?
+    val inputFile: Path,
+    val className: String?,
+    val whitelist: Set<String>?,
+    val blacklist: Set<String>?,
+    val visibility: List<JavaVisibilityModifier>,
+    val outputInterfaceName: String?,
+    val outputFile: Path?
 ) : CLI.CLICommand {
 
     override fun execute(): String {
