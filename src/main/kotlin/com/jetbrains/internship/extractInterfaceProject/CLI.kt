@@ -8,49 +8,7 @@ import java.nio.file.Paths
 
 class CLI {
     interface CLICommand {
-        fun execute(): CLICommandResult
-    }
-
-    class CLICommandResult {
-        private val errors = ArrayList<String>()
-        private val warnings = ArrayList<String>()
-        fun addError(error: String): CLICommandResult {
-            errors.add(error)
-            return this
-        }
-
-        fun addWarning(warning: String): CLICommandResult {
-            warnings.add(warning)
-            return this
-        }
-
-        fun flattenToString(): String {
-            if (errors.isNotEmpty()) {
-                return errors.joinToString(separator = "\n") { "[ERROR] $it" }
-            }
-            if (warnings.isNotEmpty()) {
-                return warnings.joinToString(separator = "\n", postfix = "[INFO] Successfully") { "[WARNING] $it" }
-            }
-            return "[INFO] Successfully"
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as CLICommandResult
-
-            if (errors != other.errors) return false
-            if (warnings != other.warnings) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = errors.hashCode()
-            result = 31 * result + warnings.hashCode()
-            return result
-        }
+        fun execute(): String
     }
 
     fun readCommand(args: Array<String>): CLICommand {
@@ -102,6 +60,12 @@ class CLI {
     }
 
     fun executeAndPrint(cliCommand: CLICommand) {
-        print(cliCommand.execute().flattenToString())
+        print(
+            try {
+                cliCommand.execute()
+            } catch (exception: Exception) {
+                exception.message
+            }
+        )
     }
 }

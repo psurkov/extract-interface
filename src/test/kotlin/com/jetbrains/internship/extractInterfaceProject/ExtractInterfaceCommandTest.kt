@@ -1,10 +1,12 @@
 package com.jetbrains.internship.extractInterfaceProject
 
+import com.github.javaparser.ParseProblemException
 import com.jetbrains.internship.extractInterfaceProject.JavaVisibilityModifier.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -18,10 +20,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testEmpty() {
-        testSample(
+        checkCorrectSample(
             "Empty",
             "Empty",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -32,10 +33,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testEmptyCustomName() {
-        testSample(
+        checkCorrectSample(
             "Empty",
             "EmptyCustomName",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -46,10 +46,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testJustFields() {
-        testSample(
+        checkCorrectSample(
             "JustFields",
             "JustFields",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -60,10 +59,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testOnlyPrivateVisibility() {
-        testSample(
+        checkCorrectSample(
             "Visibility",
             "VisibilityOnlyPrivate",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -74,10 +72,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testPublicAndInternalVisibility() {
-        testSample(
+        checkCorrectSample(
             "Visibility",
             "VisibilityPublicAndInternal",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -88,10 +85,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testReturnTypes() {
-        testSample(
+        checkCorrectSample(
             "ReturnTypes",
             "ReturnTypes",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -102,10 +98,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testThrows() {
-        testSample(
+        checkCorrectSample(
             "Throws",
             "Throws",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -116,10 +111,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testArguments() {
-        testSample(
+        checkCorrectSample(
             "Arguments",
             "Arguments",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -130,10 +124,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testClassGenerics() {
-        testSample(
+        checkCorrectSample(
             "ClassGenerics",
             "ClassGenerics",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -144,10 +137,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testPackageAndImports() {
-        testSample(
+        checkCorrectSample(
             "PackageAndImports",
             "PackageAndImports",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -158,10 +150,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testModifiers() {
-        testSample(
+        checkCorrectSample(
             "Modifiers",
             "Modifiers",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -172,10 +163,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testClassesTop() {
-        testSample(
+        checkCorrectSample(
             "ClassesTop",
             "ClassesTop",
-            CLI.CLICommandResult(),
             null,
             null,
             null,
@@ -186,10 +176,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testClassesInner() {
-        testSample(
+        checkCorrectSample(
             "ClassesTop",
             "ClassesInner",
-            CLI.CLICommandResult(),
             "ClassesTop.ClassesInner",
             null,
             null,
@@ -200,10 +189,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testClassesNested() {
-        testSample(
+        checkCorrectSample(
             "ClassesTop",
             "ClassesNested",
-            CLI.CLICommandResult(),
             "ClassesTop.ClassesNested",
             null,
             null,
@@ -214,10 +202,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testClassesSide() {
-        testSample(
+        checkCorrectSample(
             "ClassesTop",
             "ClassesSide",
-            CLI.CLICommandResult(),
             "ClassesSide",
             null,
             null,
@@ -228,10 +215,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testWhitelist() {
-        testSample(
+        checkCorrectSample(
             "ManyFunc",
             "ManyFuncSome",
-            CLI.CLICommandResult(),
             null,
             setOf("f2", "f5"),
             null,
@@ -242,10 +228,9 @@ internal class ExtractInterfaceCommandTest {
 
     @Test
     fun testBlacklist() {
-        testSample(
+        checkCorrectSample(
             "ManyFunc",
             "ManyFuncSome",
-            CLI.CLICommandResult(),
             null,
             null,
             setOf("f1", "f3", "f4"),
@@ -272,10 +257,9 @@ internal class ExtractInterfaceCommandTest {
         Assertions.assertEquals(actual, expected)
     }
 
-    private fun testSample(
+    private fun checkCorrectSample(
         inputSampleName: String,
         expectedSampleName: String,
-        expectedCLICommandResult: CLI.CLICommandResult,
         className: String?,
         whitelist: Set<String>?,
         blacklist: Set<String>?,
@@ -283,7 +267,7 @@ internal class ExtractInterfaceCommandTest {
         outputInterfaceName: String?
     ) {
         val outputInterfacePath = tempDir.resolve("result.java")
-        val cliResult = ExtractInterfaceCommand(
+        ExtractInterfaceCommand(
             inputPath.resolve("$inputSampleName.java"),
             className,
             whitelist,
@@ -292,9 +276,92 @@ internal class ExtractInterfaceCommandTest {
             outputInterfaceName,
             outputInterfacePath
         ).execute()
-        Assertions.assertEquals(expectedCLICommandResult, cliResult)
         val actual = Files.readAllLines(outputInterfacePath)
         val expected = Files.readAllLines(expectedPath.resolve("$expectedSampleName.java"))
         Assertions.assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testNoSuchFile(@TempDir tempDir: Path) {
+        val input = tempDir.resolve("NoSuchFile.java")
+        Assertions.assertThrows(NoSuchFileException::class.java) {
+            ExtractInterfaceCommand(
+                input,
+                null,
+                null,
+                null,
+                JavaVisibilityModifier.values().asList(),
+                null,
+                null
+            ).execute()
+        }
+    }
+
+    @Test
+    fun testNotJavaInput(@TempDir tempDir: Path) {
+        val input = tempDir.resolve("text.txt")
+        input.toFile().writeText("this is not a Java program")
+        Assertions.assertThrows(ParseProblemException::class.java) {
+            ExtractInterfaceCommand(
+                input,
+                null,
+                null,
+                null,
+                JavaVisibilityModifier.values().asList(),
+                null,
+                null
+            ).execute()
+        }
+    }
+
+    @Test
+    fun testNoTargetClass(@TempDir tempDir: Path) {
+        val input = tempDir.resolve("A.java")
+        input.toFile().writeText("public class A {}")
+        Assertions.assertThrows(IllegalArgumentException::class.java) {
+            ExtractInterfaceCommand(
+                input,
+                "B",
+                null,
+                null,
+                JavaVisibilityModifier.values().asList(),
+                null,
+                null
+            ).execute()
+        }
+    }
+
+    @Test
+    fun testNoRootClass(@TempDir tempDir: Path) {
+        val input = tempDir.resolve("A.java")
+        input.toFile().writeText("interface A {}")
+        Assertions.assertThrows(IllegalArgumentException::class.java) {
+            ExtractInterfaceCommand(
+                input,
+                null,
+                null,
+                null,
+                JavaVisibilityModifier.values().asList(),
+                null,
+                null
+            ).execute()
+        }
+    }
+
+    @Test
+    fun testTargetIsEnum(@TempDir tempDir: Path) {
+        val input = tempDir.resolve("A.java")
+        input.toFile().writeText("enum A {}")
+        Assertions.assertThrows(IllegalArgumentException::class.java) {
+            ExtractInterfaceCommand(
+                input,
+                "A",
+                null,
+                null,
+                JavaVisibilityModifier.values().asList(),
+                null,
+                null
+            ).execute()
+        }
     }
 }

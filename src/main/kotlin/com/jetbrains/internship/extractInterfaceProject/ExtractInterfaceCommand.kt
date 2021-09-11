@@ -17,7 +17,7 @@ class ExtractInterfaceCommand(
     private val outputFile: Path?
 ) : CLI.CLICommand {
 
-    override fun execute(): CLI.CLICommandResult {
+    override fun execute(): String {
         val inputCompilationUnit = StaticJavaParser.parse(inputFile)
         val selectedClass = findClass(inputCompilationUnit, className)
 
@@ -33,7 +33,8 @@ class ExtractInterfaceCommand(
             outputFile ?: inputFile.parent.resolve("${selectedClass.nameAsString}Interface.java"),
             targetCompilationUnit.toString()
         )
-        return CLI.CLICommandResult()
+        return "Successfully extracted interface \"${targetInterface.nameAsString}\"" +
+                "from class \"${selectedClass.nameAsString}\""
     }
 
     private fun findClass(
@@ -41,14 +42,16 @@ class ExtractInterfaceCommand(
         targetClassName: String?
     ): ClassOrInterfaceDeclaration {
         return if (targetClassName == null) {
-            compilationUnit.primaryType.orElse(null) as? ClassOrInterfaceDeclaration
+            (compilationUnit.primaryType.orElse(null) as? ClassOrInterfaceDeclaration)?.takeUnless {
+                it.isInterface
+            } ?: throw IllegalArgumentException("Cannot find primary class")
         } else {
             compilationUnit.findFirst(
                 ClassOrInterfaceDeclaration::class.java
             ) {
-                it.fullyQualifiedName.filter { className -> className == targetClassName }.isPresent
-            }.orElse(null)
-        }?.takeIf { !it.isInterface } ?: TODO()
+                !it.isInterface && it.fullyQualifiedName.filter { className -> className == targetClassName }.isPresent
+            }.orElseThrow { IllegalArgumentException("Cannot find class $targetClassName") }
+        }
     }
 
     private fun addPackageAndImports(
@@ -65,7 +68,9 @@ class ExtractInterfaceCommand(
         whitelist: Set<String>?,
         blacklist: Set<String>?
     ) {
-        // TODO check whitelist & blacklist intersection
+        if (whitelist.orEmpty().intersect(blacklist.orEmpty()).isNotEmpty()) {
+            throw IllegalArgumentException("Whitelist and blacklist overlap")
+        }
         targetClass.methods.filter {
             when {
                 it.isPrivate -> visibility.contains(JavaVisibilityModifier.PRIVATE)
