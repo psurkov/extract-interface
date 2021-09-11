@@ -26,14 +26,17 @@ class ExtractInterfaceCommand(
             targetCompilationUnit.addInterface(outputInterfaceName ?: selectedClass.nameAsString + "Interface")
 
         addPackageAndImports(inputCompilationUnit, targetCompilationUnit)
+        addClassGenerics(selectedClass, targetInterface)
         addMethods(selectedClass, targetInterface, whitelist, blacklist)
         addStaticClasses(selectedClass, targetInterface)
 
         Files.writeString(
-            outputFile ?: inputFile.parent.resolve("${selectedClass.nameAsString}Interface.java"),
+            outputFile ?: inputFile.toAbsolutePath().parent.resolve(
+                "${selectedClass.nameAsString}Interface.java"
+            ),
             targetCompilationUnit.toString()
         )
-        return "Successfully extracted interface \"${targetInterface.nameAsString}\"" +
+        return "Successfully extracted interface \"${targetInterface.nameAsString}\" " +
                 "from class \"${selectedClass.nameAsString}\""
     }
 
@@ -62,16 +65,24 @@ class ExtractInterfaceCommand(
         targetCompilationUnit.imports = inputCompilationUnit.imports
     }
 
+    private fun addClassGenerics(
+        selectedClass: ClassOrInterfaceDeclaration,
+        targetInterface: ClassOrInterfaceDeclaration
+    ) {
+        selectedClass.typeParameters
+            .forEach(targetInterface::addTypeParameter)
+    }
+
     private fun addMethods(
-        targetClass: ClassOrInterfaceDeclaration,
-        resultInterface: ClassOrInterfaceDeclaration,
+        selectedClass: ClassOrInterfaceDeclaration,
+        targetInterface: ClassOrInterfaceDeclaration,
         whitelist: Set<String>?,
         blacklist: Set<String>?
     ) {
         if (whitelist.orEmpty().intersect(blacklist.orEmpty()).isNotEmpty()) {
             throw IllegalArgumentException("Whitelist and blacklist overlap")
         }
-        targetClass.methods.filter {
+        selectedClass.methods.filter {
             when {
                 it.isPrivate -> visibility.contains(JavaVisibilityModifier.PRIVATE)
                 it.isProtected -> visibility.contains(JavaVisibilityModifier.PROTECTED)
@@ -80,7 +91,7 @@ class ExtractInterfaceCommand(
             } && (whitelist == null || whitelist.contains(it.nameAsString))
                     && (blacklist == null || !blacklist.contains(it.nameAsString))
         }.forEach {
-            resultInterface.members.add(it.apply {
+            targetInterface.members.add(it.apply {
                 if (!it.isStatic) {
                     removeBody()
                 }
@@ -98,12 +109,12 @@ class ExtractInterfaceCommand(
     }
 
     private fun addStaticClasses(
-        targetClass: ClassOrInterfaceDeclaration,
-        resultInterface: ClassOrInterfaceDeclaration
+        selectedClass: ClassOrInterfaceDeclaration,
+        targetInterface: ClassOrInterfaceDeclaration
     ) {
-        targetClass.childNodes
+        selectedClass.childNodes
             .filterIsInstance<ClassOrInterfaceDeclaration>()
             .filter { it.isStatic }
-            .forEach(resultInterface::addMember)
+            .forEach(targetInterface::addMember)
     }
 }

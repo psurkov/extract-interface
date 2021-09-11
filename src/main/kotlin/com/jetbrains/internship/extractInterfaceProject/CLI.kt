@@ -64,7 +64,7 @@ class CLI {
             try {
                 cliCommand.execute()
             } catch (exception: Exception) {
-                exception.message
+                exception.toString()
             }
         )
     }
